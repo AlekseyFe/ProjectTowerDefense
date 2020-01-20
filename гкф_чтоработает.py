@@ -306,7 +306,7 @@ class Enemy(pygame.sprite.Sprite):
 
         self.senter_enemy = [self.x + CELL_SIZE * 0.5, self.y + CELL_SIZE * 0.5]
 
-        self.poten_heatpoints = 10000
+        self.poten_heatpoints = 100
 
         self.image = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA, 32)
 
