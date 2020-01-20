@@ -15,9 +15,13 @@ group_bullet = pygame.sprite.Group()
 group_enemy = pygame.sprite.Group()
 group_tower = pygame.sprite.Group()
 
+group_game_over = pygame.sprite.Group()
+
 group_button_pay_tower = pygame.sprite.Group()
 
 group_interfeic = pygame.sprite.Group()
+
+group_interfeic_izo_tower = pygame.sprite.Group()
 
 coins = 100
 
@@ -36,10 +40,26 @@ FRAGES = 0
 LEFT = 10
 TOP = 10
 
+
 heatpoints = 10
+
 
 coordinates_base = None
 
+import os
+
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join('data', name)
+    image = pygame.image.load(fullname).convert()
+
+    if colorkey is not None:
+        if colorkey == -1:
+            colorkey = image.get_at((0, 0))
+        image.set_colorkey(colorkey)
+    else:
+        image = image.convert_alpha()
+    return image
 
 class Board:
     def __init__(self, map_game, width, height):
@@ -95,6 +115,8 @@ class Board:
                 coordinates_click_tower = cell_coords
                 # MachineGun(cell_coords[0], cell_coords[1])
 
+
+
     def get_click(self, mouse_pos):
         cell = self.get_cell(mouse_pos)
         print(cell)
@@ -102,17 +124,19 @@ class Board:
 
 
 class Bullet(pygame.sprite.Sprite):
+    image = load_image("new_bullet.png")
     def __init__(self, x_y_spawn, speed, enemy_tsel, damage):  # скорость пули в пикселях в секнуду
         super().__init__(all_sprites, group_bullet)
         self.speed = speed
 
         self.damage = damage
         self.size_bullet = (6, 6)
-        self.image = pygame.Surface(self.size_bullet, pygame.SRCALPHA, 32)
+        self.image = pygame.transform.scale(Bullet.image, (15, 15))
+
 
         self.rect = pygame.Rect(x_y_spawn[0] - self.size_bullet[0] * 0.5, x_y_spawn[1] - self.size_bullet[1] * 0.5,
                                 self.size_bullet[0], self.size_bullet[1])
-        pygame.draw.circle(self.image, pygame.Color("red"), (3, 3), 3)
+        # pygame.draw.circle(self.image, pygame.Color("red"), (3, 3), 3)
         self.x_bullet = x_y_spawn[0]
         self.y_bullet = x_y_spawn[1]
         self.enemy_tsel = enemy_tsel
@@ -148,6 +172,7 @@ class Bullet(pygame.sprite.Sprite):
         # self.rect.move(self.x_change,
         #                            нужно проверить как работает
         # self.y_change)
+
 
         self.check_collide_bullet_with_enemy()
 
@@ -196,8 +221,8 @@ class RadiusFire(pygame.sprite.Sprite):
 
 class MachineGun(Tower):
 
-    def __init__(self, x_cell, y_cell, rate_of_fire=5, radius_of_the_fire=150,
-                 speed_of_the_bullet=5):
+    def __init__(self, x_cell, y_cell, rate_of_fire=1, radius_of_the_fire=150,
+                 speed_of_the_bullet=7):
         super().__init__(x_cell, y_cell)  # нужно окрасить холст
         self.radius_of_the_fire = radius_of_the_fire
         self.rate_of_fire = rate_of_fire
@@ -229,9 +254,15 @@ class MachineGun(Tower):
         if self.time_current - self.time_last_shot >= self.time_next_shot:
 
             # print(perf_counter())
-            spisok_vragov_na_change = pygame.sprite.spritecollide(self.object_RadiusFire,
-                                                                  group_enemy,
-                                                                  False)  # надо найти ближайшего к базе врага
+            tro = []
+            for enemy in group_enemy:
+                if pygame.sprite.collide_rect(enemy, self.object_RadiusFire):
+                    tro.append(enemy)
+
+            spisok_vragov_na_change = tro
+            # spisok_vragov_na_change = pygame.sprite.spritecollide(self.object_RadiusFire,
+            #                                                       group_enemy,
+            #                                                       False)  # надо найти ближайшего к базе врага
             if len(spisok_vragov_na_change) != 0:
                 puti_do_base = list(map(
                     lambda s: sqrt(
@@ -306,7 +337,7 @@ class Enemy(pygame.sprite.Sprite):
 
         self.senter_enemy = [self.x + CELL_SIZE * 0.5, self.y + CELL_SIZE * 0.5]
 
-        self.poten_heatpoints = 100
+        self.poten_heatpoints = 10000
 
         self.image = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA, 32)
 
@@ -357,6 +388,7 @@ class Enemy(pygame.sprite.Sprite):
 
                 self.rect = self.rect.move(-1 * self.last_vector_x * int(self.x_change),
                                            -1 * self.last_vector_y * int(self.y_change))
+
 
                 self.senter_enemy[0] += -1 * self.last_vector_x * int(self.x_change)
                 self.senter_enemy[1] += -1 * self.last_vector_y * int(self.y_change)
@@ -432,6 +464,7 @@ class Enemy(pygame.sprite.Sprite):
         else:
 
             self.negative = False
+
 
 
 class AllEnemys:
@@ -510,6 +543,7 @@ class BulletArtillery(Bullet):
             self.kill()
 
 
+
 class Base(pygame.sprite.Sprite):
     def __init__(self, x_cell, y_cell):
         super().__init__(all_sprites)
@@ -527,14 +561,15 @@ class Base(pygame.sprite.Sprite):
 
     def check_na_visit_enemy(self):
         spisok_vragov_na_base = pygame.sprite.spritecollide(self,
-                                                            group_enemy,
-                                                            False)
+                                                              group_enemy,
+                                                              False)
         if spisok_vragov_na_base != []:
             global heatpoints, coins
             for enemy in spisok_vragov_na_base:
                 enemy.killer()
                 heatpoints -= 1
                 coins -= 10
+
 
 
 class Pole_Interfeic(pygame.sprite.Sprite):
@@ -555,12 +590,82 @@ class Pole_Interfeic(pygame.sprite.Sprite):
 
         self.active_window = True
 
+        self.spisok_tower = []
+
     def update(self, coins):
         self.image.fill(pygame.Color('black'))
         self.text_coins = self.font.render(f"Coins: {coins}", 1, (100, 255, 100))
         self.image.blit(self.text_coins, (self.infa_coins_x, self.infa_coins_y))
         self.text_heat = self.font.render(f"Heats: {heatpoints}", 1, (100, 255, 100))
         self.image.blit(self.text_heat, (self.infa_heat_x, self.infa_heat_y))
+
+x_izo_tower = 1000
+y_izo_tower = 500
+
+tower_number = 1
+
+class izo_radius_tower(pygame.sprite.Sprite):
+    def __init__(self, x, y, radius):
+        super().__init__(group_interfeic_izo_tower)
+
+        self.radius = radius
+
+        self.size_width_but = 40
+        self.size_height_but = 20
+
+        self.image = pygame.Surface((self.size_width_but, self.size_height_but), pygame.SRCALPHA, 32)
+        self.rect = pygame.Rect(x, y, self.size_width_but, self.size_height_but)
+
+        self.font = pygame.font.Font(None, 5)
+
+    def drawing(self):
+        self.image.fill(pygame.Color('black'))
+        self.text = self.font.render(f"R: {self.radius}", 1, (100, 255, 100))
+
+
+        text_x = 1
+        text_y = 1
+
+        text_w = self.text.get_width()
+        text_h = self.text.get_height()
+
+        pygame.draw.rect(self.image, (0, 255, 0), (0, 0,
+                                                   self.size_width_but, self.size_height_but), 1)
+        self.image.blit(self.text, (10, 10))
+
+        print("h")
+
+
+
+class izo_tower(pygame.sprite.Sprite):
+    def __init__(self, tower):
+        super().__init__(group_interfeic_izo_tower)
+
+        self.size_pole = [120, 60]
+        self.image = pygame.Surface(self.size_pole, pygame.SRCALPHA, 32)
+
+        self.rect = pygame.Rect(x_izo_tower, y_izo_tower, self.size_pole[0], self.size_pole[1])
+
+
+
+        self.font = pygame.font.Font(None, 5)
+
+        self.text = self.font.render(f"{tower_number}", 1, (100, 255, 100))
+        self.image.blit(self.text, (0, 0))
+        pygame.draw.rect(self.image, pygame.Color("yellow"), (20, 0, 60, self.size_pole[1]))
+
+        self.object_izo_radius_tower = izo_radius_tower(65, 10, tower.radius_of_the_fire)
+        self.object_izo_radius_tower.drawing()
+
+        print("e")
+
+
+
+draw_spisok_tower = True
+
+
+
+
 
 
 # class Main_spisok_tower(pygame.sprite.Sprite):
@@ -666,6 +771,28 @@ class Pay_tower_interfeic(pygame.sprite.Sprite):
             self.object_button_no.zalivka()
 
 
+
+class Game_over(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__(group_game_over)
+
+        self.image = pygame.Surface((800, 300), pygame.SRCALPHA, 32)
+        self.rect = pygame.Rect(300, 300, 600, 300)
+        self.active_window = False
+
+        self.infa_x = 50
+        self.infa_y = 100
+        self.font = pygame.font.Font(None, 100)
+
+    def drawing(self):
+        if self.active_window:
+            self.text = self.font.render("GAME OVER", 1, (50, 255, 200))
+            self.image.blit(self.text, (self.infa_x, self.infa_y))
+
+
+
+
+
 Pole_Interfeic()
 
 object_pay_interfeic = Pay_tower_interfeic()
@@ -682,8 +809,14 @@ board.render()
 
 object_Base = Base(coordinates_base[0], coordinates_base[1])
 
+object_Game_over = Game_over()
+
 coordinates_click_tower = None
 circle_of_tower = None
+
+
+spisok_tower = []
+
 
 enemys = AllEnemys()
 
@@ -698,13 +831,44 @@ while running:
         if event.type == pygame.MOUSEBUTTONUP:
             if event.button == pygame.BUTTON_LEFT:
                 board.get_click(event.pos)
+                print(25)
+
+                for tower in group_tower:
+                    print(circle_of_tower)
+                    # if tower.rect.collidepoint(event.pos) and circle_of_tower == None:
+                    #     tower.object_RadiusFire.draw_circle = True
+                    #     print(tower.object_RadiusFire.draw_circle)
+                    #     circle_of_tower = tower.object_RadiusFire
+                    if tower.rect.collidepoint(event.pos) and circle_of_tower != tower.object_RadiusFire:
+                        print(1)
+                        circle_of_tower.draw_circle = False
+                        tower.object_RadiusFire.draw_circle = True
+                        circle_of_tower = tower.object_RadiusFire
+                    elif tower.rect.collidepoint(event.pos) and circle_of_tower == tower.object_RadiusFire:
+
+                        if tower.object_RadiusFire.draw_circle == False:
+                            print("k")
+                            tower.object_RadiusFire.draw_circle = True
+                            circle_of_tower = tower.object_RadiusFire
+                        else:
+                            print("n")
+                            tower.object_RadiusFire.draw_circle = False
+                            circle_of_tower = tower.object_RadiusFire
+
+
                 if object_pay_interfeic.active_window == True and coordinates_click_tower != None:
                     if (object_pay_interfeic.object_button_yes.x < event.pos[
                         0] < object_pay_interfeic.object_button_yes.x + object_pay_interfeic.object_button_yes.size_width_but) and (
                             object_pay_interfeic.object_button_yes.y < event.pos[
-                        1] < object_pay_interfeic.object_button_yes.y + object_pay_interfeic.object_button_yes.size_height_but):
+                        1] < object_pay_interfeic.object_button_yes.y + object_pay_interfeic.object_button_yes.size_height_but) and coins >= 50:
+
                         board.map_game[coordinates_click_tower[1]][coordinates_click_tower[0]] = "t_zanyat"
                         a = MachineGun(coordinates_click_tower[0], coordinates_click_tower[1])
+                        spisok_tower.append(izo_tower(a))
+                        tower_number += 1
+                        draw_spisok_tower = True
+
+
                         circle_of_tower = a.object_RadiusFire
                         for tower in group_tower:
                             tower.object_RadiusFire.draw_circle = False
@@ -721,18 +885,8 @@ while running:
                         1] < object_pay_interfeic.object_button_no.y + object_pay_interfeic.object_button_no.size_height_but):
                         object_pay_interfeic.active_window = False
 
-                for tower in group_tower:
-                    # if tower.rect.collidepoint(event.pos) and circle_of_tower == None:
-                    #     tower.object_RadiusFire.draw_circle = True
-                    #     print(tower.object_RadiusFire.draw_circle)
-                    #     circle_of_tower = tower.object_RadiusFire
-                    if tower.rect.collidepoint(event.pos) and circle_of_tower != tower.object_RadiusFire:
-                        print(1)
-                        circle_of_tower.draw_circle = False
-                        tower.object_RadiusFire.draw_circle = True
-                        circle_of_tower = tower.object_RadiusFire
-                    if tower.rect.collidepoint(event.pos) and circle_of_tower == tower.object_RadiusFire:
-                        circle_of_tower.draw_circle = False
+
+
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_x:
@@ -741,10 +895,17 @@ while running:
                 else:
                     pause = False
 
+    if heatpoints <= 0:
+        pause = True
+        object_Game_over.active_window = True
+
+    object_Game_over.drawing()
     if pause == False:
         for tower in group_tower:
             tower.update()
             tower.object_RadiusFire.drawing()
+
+
 
         for bullet in group_bullet:
             bullet.update()
@@ -753,13 +914,17 @@ while running:
         for enemy in group_enemy:
             enemy.update()
 
+
+
         object_Base.check_na_visit_enemy()
+
 
         enemys.new_enemy_first()
 
         enemys.new_enemy_second()
 
         enemys.new_enemy_third()
+
 
     for inter in group_interfeic:
         inter.update(coins)
@@ -773,8 +938,13 @@ while running:
     if perf_counter() > 15:
         FRAGES = 110
 
+
+    if draw_spisok_tower:
+        print("f")
+        group_interfeic_izo_tower.draw(screen)
     # group_bullet.update(enemy)
     board.render()
+    group_game_over.draw(screen)
     group_interfeic.draw(screen)
     group_button_pay_tower.draw(screen)
     all_sprites.draw(screen)
